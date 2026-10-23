@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetMaster Pro - Fleet Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            DEFAULT: '#2563EB',
+                            light: '#3B82F6',
+                            dark: '#1D4ED8',
+                            bg: '#F4F7FB'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome & Lucide Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="bg-[#F4F7FB] dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- LOGIN MODAL / STATE OVERLAY -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-100 dark:border-slate-700">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-14 h-14 bg-blue-100 dark:bg-blue-900/50 rounded-2xl text-[#2563EB] mb-4">
+                    <i class="fa-solid fa-truck-fast text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900 dark:text-white" id="authTitle">Sign In to FleetMaster</h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your fleet, drivers, and maintenance efficiently</p>
+            </div>
+            <form id="authForm" onsubmit="handleAuth(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">Email Address</label>
+                    <div class="relative">
+                        <i class="fa-regular fa-envelope absolute left-3.5 top-3 text-slate-400"></i>
+                        <input type="email" id="authEmail" required value="admin@fleetmaster.com" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] text-sm transition">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">Password</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400"></i>
+                        <input type="password" id="authPassword" required value="password123" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] text-sm transition">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 bg-[#2563EB] hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 transition duration-150 flex items-center justify-center gap-2">
+                    <span id="authBtnText">Sign In</span>
+                    <i class="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+            </form>
+            <div class="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                <span id="authToggleText">Don't have an account?</span> 
+                <button onclick="toggleAuthMode()" id="authToggleBtn" class="text-[#2563EB] font-semibold hover:underline ml-1">Register</button>
+            </div>
+            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 text-center">
+                <button onclick="guestLogin()" class="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">Continue as Guest Demo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN WRAPPER -->
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col transition-transform duration-300 md:translate-x-0 -translate-x-full">
+            <!-- Logo -->
+            <div class="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-700/60 justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-[#2563EB] rounded-xl flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/30">
+                        <i class="fa-solid fa-truck-fast"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-lg text-slate-900 dark:text-white tracking-tight">Fleet<span class="text-[#2563EB]">Master</span></span>
+                        <span class="text-[10px] block font-semibold text-slate-400 uppercase tracking-widest -mt-1">Pro Suite</span>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar()" class="md:hidden text-slate-500 hover:text-slate-700 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
+                <p class="px-3 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Main Menu</p>
+                
+                <a href="#" onclick="showPage('dashboard')" id="nav-dashboard" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition text-[#2563EB] bg-blue-50 dark:bg-blue-900/30">
+                    <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="#" onclick="showPage('vehicles')" id="nav-vehicles" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50">
+                    <i class="fa-solid fa-truck w-5 text-center"></i>
+                    <span>Vehicle Management</span>
+                </a>
+
+                <a href="#" onclick="showPage('drivers')" id="nav-drivers" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50">
+                    <i class="fa-solid fa-id-card w-5 text-center"></i>
+                    <span>Driver Management</span>
+                </a>
+
+                <a href="#" onclick="showPage('assignments')" id="nav-assignments" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50">
+                    <i class="fa-solid fa-link w-5 text-center"></i>
+                    <span>Vehicle Assignment</span>
+                </a>
+
+                <a href="#" onclick="showPage('maintenance')" id="nav-maintenance" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50">
+                    <i class="fa-solid fa-wrench w-5 text-center"></i>
+                    <span>Maintenance Schedule</span>
+                </a>
+
+                <a href="#" onclick="showPage('fuel')" id="nav-fuel" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50">
+                    <i class="fa-solid fa-gas-pump w-5 text-center"></i>
+                    <span>Fuel Management</span>
+                </a>
+
+                <a href="#" onclick="showPage('reports')" id="nav-reports" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50">
+                    <i class="fa-solid fa-chart-line w-5 text-center"></i>
+                    <span>Reports & Analytics</span>
+                </a>
+            </nav>
+
+            <!-- User Info Sidebar Footer -->
+            <div class="p-4 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div id="userAvatar" class="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900 text-[#2563EB] font-bold flex items-center justify-center text-sm">
+                            AD
+                        </div>
+                        <div class="overflow-hidden">
+                            <h4 id="userName" class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">Admin User</h4>
+                            <p id="userRole" class="text-[11px] text-slate-500 dark:text-slate-400">Fleet Manager</p>
+                        </div>
+                    </div>
+                    <button onclick="logout()" class="text-slate-400 hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30" title="Logout">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT CONTAINER -->
+        <div class="flex-1 flex flex-col md:ml-64 overflow-hidden">
+
+            <!-- TOP NAVBAR -->
+            <header class="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 md:px-8 flex items-center justify-between gap-4 z-30">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="md:hidden text-slate-600 dark:text-slate-300 hover:text-slate-900 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+                    <h1 id="pageTitle" class="text-xl font-bold text-slate-800 dark:text-white">Dashboard Overview</h1>
+                </div>
+
+                <!-- Right Actions -->
+                <div class="flex items-center gap-3">
+                    <!-- Quick Stats Pill -->
+                    <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-full border border-emerald-200 dark:border-emerald-800">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="activeCountPill">12 Active Fleet</span>
+                    </div>
+
+                    <!-- Dark Mode Toggle Button -->
+                    <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Toggle Dark/Light Mode">
+                        <i id="themeIcon" class="fa-solid fa-moon"></i>
+                    </button>
+
+                    <!-- Notifications Dropdown Simulated -->
+                    <div class="relative">
+                        <button onclick="toggleNotifications()" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition relative">
+                            <i class="fa-regular fa-bell"></i>
+                            <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                        </button>
+                        <div id="notifMenu" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 p-4">
+                            <h4 class="font-bold text-sm text-slate-800 dark:text-white mb-2">Notifications & Reminders</h4>
+                            <div class="space-y-2 text-xs">
+                                <div class="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                    <p class="font-semibold"><i class="fa-solid fa-wrench mr-1"></i> Maintenance Due</p>
+                                    <p class="mt-0.5 opacity-90">Ford F-150 (FL-203) oil change scheduled for tomorrow.</p>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                    <p class="font-semibold"><i class="fa-solid fa-id-card mr-1"></i> License Renewal</p>
+                                    <p class="mt-0.5 opacity-90">Driver Alex Turner's license expires in 12 days.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- MAIN BODY PAGE CONTENT -->
+            <main class="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+
+                <!-- 1. DASHBOARD PAGE -->
+                <section id="page-dashboard" class="space-y-6">
+                    <!-- Status Cards (Matching Image Guidelines) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Active Card -->
+                        <div class="bg-blue-50/70 dark:bg-slate-800/80 border border-blue-100 dark:border-slate-700 rounded-2xl p-5 shadow-sm transition hover:shadow-md">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                                    <h3 class="font-bold text-emerald-600 dark:text-emerald-400 text-lg">Active</h3>
+                                </div>
+                                <span class="p-2 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                                    <i class="fa-solid fa-circle-check text-xl"></i>
+                                </span>
+                            </div>
+                            <div class="text-3xl font-extrabold text-slate-900 dark:text-white" id="stat-active">12</div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Vehicle is operational</p>
+                        </div>
+
+                        <!-- Maintenance Card -->
+                        <div class="bg-blue-50/70 dark:bg-slate-800/80 border border-blue-100 dark:border-slate-700 rounded-2xl p-5 shadow-sm transition hover:shadow-md">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                                    <h3 class="font-bold text-amber-500 dark:text-amber-400 text-lg">Maintenance</h3>
+                                </div>
+                                <span class="p-2 bg-amber-100 dark:bg-amber-950/50 text-amber-500 dark:text-amber-400 rounded-xl">
+                                    <i class="fa-solid fa-wrench text-xl"></i>
+                                </span>
+                            </div>
+                            <div class="text-3xl font-extrabold text-slate-900 dark:text-white" id="stat-maintenance">3</div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Under maintenance</p>
+                        </div>
+
+                        <!-- Out of Service Card -->
+                        <div class="bg-blue-50/70 dark:bg-slate-800/80 border border-blue-100 dark:border-slate-700 rounded-2xl p-5 shadow-sm transition hover:shadow-md">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                                    <h3 class="font-bold text-rose-500 dark:text-rose-400 text-lg">Out of Service</h3>
+                                </div>
+                                <span class="p-2 bg-rose-100 dark:bg-rose-950/50 text-rose-500 dark:text-rose-400 rounded-xl">
+                                    <i class="fa-solid fa-circle-xmark text-xl"></i>
+                                </span>
+                            </div>
+                            <div class="text-3xl font-extrabold text-slate-900 dark:text-white" id="stat-outofservice">1</div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Not operational</p>
+                        </div>
+
+                        <!-- Reserved Card -->
+                        <div class="bg-blue-50/70 dark:bg-slate-800/80 border border-blue-100 dark:border-slate-700 rounded-2xl p-5 shadow-sm transition hover:shadow-md">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-purple-400 inline-block"></span>
+                                    <h3 class="font-bold text-purple-600 dark:text-purple-400 text-lg">Reserved</h3>
+                                </div>
+                                <span class="p-2 bg-purple-100 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 rounded-xl">
+                                    <i class="fa-solid fa-bookmark text-xl"></i>
+                                </span>
+                            </div>
+                            <div class="text-3xl font-extrabold text-slate-900 dark:text-white" id="stat-reserved">2</div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Assigned/scheduled</p>
+                        </div>
+                    </div>
+
+                    <!-- Charts & GPS Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Chart 1: Fuel Consumption & Expense -->
+                        <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-800 dark:text-white">Fuel Consumption & Expense Trends</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Monthly fuel spending vs. total gallons used</p>
+                                </div>
+                                <span class="text-xs px-3 py-1 bg-blue-50 dark:bg-blue-900/40 text-[#2563EB] font-semibold rounded-lg">Last 6 Months</span>
+                            </div>
+                            <div class="h-64 relative">
+                                <canvas id="dashboardFuelChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Live GPS Radar / Vehicle Status Widget -->
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="font-bold text-slate-800 dark:text-white">Live GPS Tracker</h3>
+                                    <span class="flex items-center gap-1.5 text-xs text-emerald-500 font-semibold">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live GPS
+                                    </span>
+                                </div>
+                                <!-- Map Mock Graphics -->
+                                <div class="relative w-full h-44 bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                                    <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#2563eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                                    <!-- Animated Pin 1 -->
+                                    <div class="absolute top-1/3 left-1/4 flex flex-col items-center">
+                                        <div class="px-2 py-0.5 bg-slate-800 text-white text-[10px] rounded shadow mb-1">Volvo VNL #101</div>
+                                        <div class="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center text-white text-[8px] animate-bounce">
+                                            <i class="fa-solid fa-truck"></i>
+                                        </div>
+                                    </div>
+                                    <!-- Animated Pin 2 -->
+                                    <div class="absolute bottom-1/4 right-1/3 flex flex-col items-center">
+                                        <div class="px-2 py-0.5 bg-slate-800 text-white text-[10px] rounded shadow mb-1">Ford F-150 #102</div>
+                                        <div class="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-white text-[8px]">
+                                            <i class="fa-solid fa-truck"></i>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-slate-400 font-medium">Interactive Fleet Map Simulated</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/60 flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+                                <span>Active GPS Signals: <strong>12/12</strong></span>
+                                <button onclick="showPage('vehicles')" class="text-[#2563EB] hover:underline font-semibold">View Fleet Map &rarr;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Driver Overview Table -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800 dark:text-white">Active Driver Statistics</h3>
+                            <button onclick="showPage('drivers')" class="text-xs text-[#2563EB] font-semibold hover:underline">Manage Drivers</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 text-xs uppercase">
+                                    <tr>
+                                        <th class="py-3 px-6">Driver Name</th>
+                                        <th class="py-3 px-6">Assigned Vehicle</th>
+                                        <th class="py-3 px-6">License No.</th>
+                                        <th class="py-3 px-6">Safety Score</th>
+                                        <th class="py-3 px-6">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashDriverTable" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                    <!-- Dynamic Row Insertion -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. VEHICLE MANAGEMENT PAGE -->
+                <section id="page-vehicles" class="hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                            <div class="relative flex-1 sm:w-64">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400"></i>
+                                <input type="text" id="vehicleSearch" oninput="renderVehicles()" placeholder="Search vehicle, VIN, plate..." class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:border-[#2563EB]">
+                            </div>
+                            <select id="vehicleStatusFilter" onchange="renderVehicles()" class="py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none">
+                                <option value="ALL">All Statuses</option>
+                                <option value="Active">Active</option>
+                                <option value="Maintenance">Maintenance</option>
+                                <option value="Out of Service">Out of Service</option>
+                                <option value="Reserved">Reserved</option>
+                            </select>
+                        </div>
+                        <button onclick="openVehicleModal()" class="w-full sm:w-auto px-4 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition shadow-md shadow-blue-500/20 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Add New Vehicle</span>
+                        </button>
+                    </div>
+
+                    <!-- Vehicles Table -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 text-xs uppercase">
+                                    <tr>
+                                        <th class="py-3.5 px-6">Vehicle / Make</th>
+                                        <th class="py-3.5 px-6">Year & Model</th>
+                                        <th class="py-3.5 px-6">Plate & VIN</th>
+                                        <th class="py-3.5 px-6">Status</th>
+                                        <th class="py-3.5 px-6 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vehicleTableBody" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. DRIVER MANAGEMENT PAGE -->
+                <section id="page-drivers" class="hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                        <div class="relative flex-1 sm:w-64 w-full">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400"></i>
+                            <input type="text" id="driverSearch" oninput="renderDrivers()" placeholder="Search drivers or license..." class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:border-[#2563EB]">
+                        </div>
+                        <button onclick="openDriverModal()" class="w-full sm:w-auto px-4 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition shadow-md shadow-blue-500/20 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-user-plus"></i>
+                            <span>Add New Driver</span>
+                        </button>
+                    </div>
+
+                    <!-- Drivers Grid -->
+                    <div id="driverCardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Dynamic Cards -->
+                    </div>
+                </section>
+
+                <!-- 4. VEHICLE ASSIGNMENT PAGE -->
+                <section id="page-assignments" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Assignment Form -->
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <h3 class="font-bold text-slate-800 dark:text-white text-lg mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-link text-[#2563EB]"></i> Assign Vehicle
+                            </h3>
+                            <form onsubmit="handleAssignmentSubmit(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-2">Select Driver</label>
+                                    <select id="assignDriverSelect" required class="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none">
+                                        <!-- Options dynamic -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-2">Select Vehicle</label>
+                                    <select id="assignVehicleSelect" required class="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none">
+                                        <!-- Options dynamic -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-2">Assignment Date</label>
+                                    <input type="date" id="assignDate" required class="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none">
+                                </div>
+                                <button type="submit" class="w-full py-3 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition shadow-lg shadow-blue-500/20">
+                                    Confirm Assignment
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Current Active Assignments -->
+                        <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <h3 class="font-bold text-slate-800 dark:text-white text-lg mb-4">Current Vehicle & Driver Assignments</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 text-xs uppercase">
+                                        <tr>
+                                            <th class="py-3 px-4">Driver</th>
+                                            <th class="py-3 px-4">Vehicle Details</th>
+                                            <th class="py-3 px-4">Assigned Date</th>
+                                            <th class="py-3 px-4 text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="assignmentTableBody" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                        <!-- Dynamic -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. MAINTENANCE SCHEDULE PAGE -->
+                <section id="page-maintenance" class="hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                        <h3 class="font-bold text-slate-800 dark:text-white text-lg">Scheduled Maintenance & Service Logs</h3>
+                        <button onclick="openMaintenanceModal()" class="px-4 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition shadow-md shadow-blue-500/20 flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Schedule Service</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 text-xs uppercase">
+                                    <tr>
+                                        <th class="py-3.5 px-6">Vehicle</th>
+                                        <th class="py-3.5 px-6">Service Type</th>
+                                        <th class="py-3.5 px-6">Date</th>
+                                        <th class="py-3.5 px-6">Cost ($)</th>
+                                        <th class="py-3.5 px-6">Status</th>
+                                        <th class="py-3.5 px-6 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="maintenanceTableBody" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. FUEL MANAGEMENT & MILEAGE LOG PAGE -->
+                <section id="page-fuel" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Add Fuel Entry Form -->
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <h3 class="font-bold text-slate-800 dark:text-white text-lg mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-gas-pump text-[#2563EB]"></i> Add Fuel & Mileage Log
+                            </h3>
+                            <form onsubmit="handleFuelSubmit(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Vehicle</label>
+                                    <select id="fuelVehicleSelect" required class="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none">
+                                        <!-- Dynamic -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Gallons / Liters</label>
+                                    <input type="number" step="0.1" id="fuelGallons" required placeholder="e.g. 45.5" class="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Total Cost ($)</label>
+                                    <input type="number" step="0.01" id="fuelCost" required placeholder="e.g. 150.00" class="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Odometer Reading (Miles)</label>
+                                    <input type="number" id="fuelOdometer" required placeholder="e.g. 45200" class="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Date</label>
+                                    <input type="date" id="fuelDate" required class="w-full py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none">
+                                </div>
+                                <button type="submit" class="w-full py-3 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition shadow-lg shadow-blue-500/20">
+                                    Log Fuel Record
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Fuel Log History -->
+                        <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <h3 class="font-bold text-slate-800 dark:text-white text-lg mb-4">Fuel & Mileage Logs</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 text-xs uppercase">
+                                        <tr>
+                                            <th class="py-3 px-4">Date</th>
+                                            <th class="py-3 px-4">Vehicle</th>
+                                            <th class="py-3 px-4">Volume</th>
+                                            <th class="py-3 px-4">Cost ($)</th>
+                                            <th class="py-3 px-4">Odometer</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fuelTableBody" class="divide-y divide-slate-100 dark:divide-slate-700">
+                                        <!-- Dynamic -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 7. REPORTS & ANALYTICS PAGE -->
+                <section id="page-reports" class="hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-100 dark:border-slate-700">
+                        <div>
+                            <h3 class="font-bold text-slate-800 dark:text-white text-lg">Fleet Performance & Cost Analysis</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Generate analytics summaries and export system data</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="exportReport('CSV')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-xs transition shadow flex items-center gap-2">
+                                <i class="fa-solid fa-file-csv"></i> Export CSV
+                            </button>
+                            <button onclick="exportReport('PDF')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-medium text-xs transition shadow flex items-center gap-2">
+                                <i class="fa-solid fa-file-pdf"></i> Export Summary PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <h4 class="font-bold text-slate-800 dark:text-white mb-2">Cost Breakdown (Maintenance vs Fuel)</h4>
+                            <div class="h-64 relative">
+                                <canvas id="costBreakdownChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <h4 class="font-bold text-slate-800 dark:text-white mb-2">Fleet Status Distribution</h4>
+                            <div class="h-64 relative">
+                                <canvas id="statusDistChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL FOR ADD/EDIT VEHICLE -->
+    <div id="vehicleModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-5">
+                <h3 id="vehicleModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Add New Vehicle</h3>
+                <button onclick="closeVehicleModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveVehicle(event)" class="space-y-4">
+                <input type="hidden" id="vId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Make</label>
+                        <input type="text" id="vMake" required placeholder="Ford, Volvo, Freightliner" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Model</label>
+                        <input type="text" id="vModel" required placeholder="F-150, VNL 860" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Year</label>
+                        <input type="number" id="vYear" required placeholder="2023" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">License Plate</label>
+                        <input type="text" id="vPlate" required placeholder="FL-9821" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">VIN</label>
+                        <input type="text" id="vVin" required placeholder="1FTFW1E8..." class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Status</label>
+                        <select id="vStatus" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                            <option value="Active">Active</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="Out of Service">Out of Service</option>
+                            <option value="Reserved">Reserved</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="closeVehicleModal()" class="px-4 py-2 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow">Save Vehicle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL FOR ADD/EDIT DRIVER -->
+    <div id="driverModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-5">
+                <h3 id="driverModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Add New Driver</h3>
+                <button onclick="closeDriverModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveDriver(event)" class="space-y-4">
+                <input type="hidden" id="dId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Full Name</label>
+                    <input type="text" id="dName" required placeholder="John Doe" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">License Number</label>
+                        <input type="text" id="dLicense" required placeholder="DL-987654" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Phone Contact</label>
+                        <input type="text" id="dPhone" required placeholder="+1 555-0192" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Safety Score (%)</label>
+                    <input type="number" id="dScore" min="50" max="100" value="95" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="closeDriverModal()" class="px-4 py-2 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow">Save Driver</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL FOR SCHEDULE MAINTENANCE -->
+    <div id="maintenanceModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Schedule Service</h3>
+                <button onclick="closeMaintenanceModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="saveMaintenance(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Select Vehicle</label>
+                    <select id="mVehicleSelect" required class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                        <!-- Dynamic -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Service Type</label>
+                    <input type="text" id="mType" required placeholder="Oil Change, Tire Rotation, Engine Tuneup" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Estimated Cost ($)</label>
+                        <input type="number" id="mCost" required placeholder="250" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Date</label>
+                        <input type="date" id="mDate" required class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">Status</label>
+                    <select id="mStatus" class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm">
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="closeMaintenanceModal()" class="px-4 py-2 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow">Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CUSTOM TOAST NOTIFICATION CONTAINER -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition duration-300 flex items-center gap-3">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg" class="text-sm font-medium">Notification message</span>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        // IN-MEMORY DATA STORE (Pre-populated Realistic Dummy Data)
+        let appState = {
+            authenticated: true,
+            user: { name: "Admin Manager", email: "admin@fleetmaster.com" },
+            vehicles: [
+                { id: "v1", make: "Volvo", model: "VNL 860", year: 2022, plate: "FL-1002", vin: "4V4NC9EH3NN123456", status: "Active" },
+                { id: "v2", make: "Ford", model: "F-150 SuperCrew", year: 2023, plate: "FL-2034", vin: "1FTFW1E84MK654321", status: "Active" },
+                { id: "v3", make: "Freightliner", model: "Cascadia", year: 2021, plate: "FL-8812", vin: "1FUJGLDR9ML987654", status: "Maintenance" },
+                { id: "v4", make: "Isuzu", model: "NPR HD", year: 2020, plate: "FL-4091", vin: "JALC4B162K7001122", status: "Active" },
+                { id: "v5", make: "Kenworth", model: "T680", year: 2019, plate: "FL-7721", vin: "1XKAD49X9KJ332211", status: "Out of Service" },
+                { id: "v6", make: "Mercedes-Benz", model: "Sprinter 3500", year: 2023, plate: "FL-9901", vin: "W1W9076431N554433", status: "Reserved" }
+            ],
+            drivers: [
+                { id: "d1", name: "Alex Turner", license: "DL-882190", phone: "+1 555-0142", assignedVehicleId: "v1", score: 98 },
+                { id: "d2", name: "Sarah Jenkins", license: "DL-441209", phone: "+1 555-0189", assignedVehicleId: "v2", score: 94 },
+                { id: "d3", name: "Michael Vance", license: "DL-110293", phone: "+1 555-0123", assignedVehicleId: "v3", score: 89 },
+                { id: "d4", name: "David Miller", license: "DL-773912", phone: "+1 555-0167", assignedVehicleId: "v4", score: 96 }
+            ],
+            maintenance: [
+                { id: "m1", vehicleId: "v3", type: "Transmission Flush & Inspection", date: "2026-10-22", cost: 650, status: "In Progress" },
+                { id: "m2", vehicleId: "v2", type: "Synthetic Oil Change & Alignment", date: "2026-10-25", cost: 180, status: "Scheduled" },
+                { id: "m3", vehicleId: "v1", type: "Brake Pad Replacement", date: "2026-09-15", cost: 420, status: "Completed" }
+            ],
+            fuelLogs: [
+                { id: "f1", vehicleId: "v1", date: "2026-10-18", gallons: 65.0, cost: 227.50, odometer: 112400 },
+                { id: "f2", vehicleId: "v2", date: "2026-10-19", gallons: 24.5, cost: 85.75, odometer: 34100 },
+                { id: "f3", vehicleId: "v4", date: "2026-10-20", gallons: 38.0, cost: 133.00, odometer: 58900 }
+            ]
+        };
+
+        // DOM Loaded Init
+        window.onload = function() {
+            // Pre-fill today date fields
+            const today = new Date().toISOString().split('T')[0];
+            if (document.getElementById('assignDate')) document.getElementById('assignDate').value = today;
+            if (document.getElementById('fuelDate')) document.getElementById('fuelDate').value = today;
+            if (document.getElementById('mDate')) document.getElementById('mDate').value = today;
+
+            // Render All Views Initial Data
+            renderDashboard();
+            renderVehicles();
+            renderDrivers();
+            renderAssignments();
+            renderMaintenance();
+            renderFuel();
+            initCharts();
+
+            // Check theme mode preference
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                toggleDarkMode();
+            }
+        };
+
+        // --- AUTHENTICATION SYSTEM ---
+        let isRegisterMode = false;
+
+        function toggleAuthMode() {
+            isRegisterMode = !isRegisterMode;
+            document.getElementById('authTitle').innerText = isRegisterMode ? 'Create Fleet Account' : 'Sign In to FleetMaster';
+            document.getElementById('authBtnText').innerText = isRegisterMode ? 'Register Account' : 'Sign In';
+            document.getElementById('authToggleText').innerText = isRegisterMode ? 'Already have an account?' : "Don't have an account?";
+            document.getElementById('authToggleBtn').innerText = isRegisterMode ? 'Sign In' : 'Register';
+        }
+
+        function handleAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value;
+            appState.authenticated = true;
+            appState.user.email = email;
+            appState.user.name = email.split('@')[0].toUpperCase();
+            
+            document.getElementById('userName').innerText = appState.user.name;
+            document.getElementById('userAvatar').innerText = appState.user.name.substring(0, 2);
+            document.getElementById('loginModal').classList.add('hidden');
+            showToast(isRegisterMode ? "Account registered successfully!" : "Logged in successfully!");
+        }
+
+        function guestLogin() {
+            document.getElementById('loginModal').classList.add('hidden');
+            showToast("Logged in as Guest Demo");
+        }
+
+        function logout() {
+            document.getElementById('loginModal').classList.remove('hidden');
+            showToast("Logged out successfully");
+        }
+
+        // --- NAVIGATION & UI TOGGLES ---
+        function showPage(pageId) {
+            const pages = ['dashboard', 'vehicles', 'drivers', 'assignments', 'maintenance', 'fuel', 'reports'];
+            const pageTitles = {
+                'dashboard': 'Dashboard Overview',
+                'vehicles': 'Vehicle Management',
+                'drivers': 'Driver Management',
+                'assignments': 'Vehicle Assignment',
+                'maintenance': 'Maintenance Schedule & History',
+                'fuel': 'Fuel Management & Mileage Log',
+                'reports': 'Reports & Analytics'
+            };
+
+            pages.forEach(p => {
+                const pageEl = document.getElementById(`page-${p}`);
+                const navEl = document.getElementById(`nav-${p}`);
+                if (p === pageId) {
+                    pageEl.classList.remove('hidden');
+                    if (navEl) {
+                        navEl.className = "nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition text-[#2563EB] bg-blue-50 dark:bg-blue-900/30";
+                    }
+                } else {
+                    pageEl.classList.add('hidden');
+                    if (navEl) {
+                        navEl.className = "nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50";
+                    }
+                }
+            });
+
+            document.getElementById('pageTitle').innerText = pageTitles[pageId] || 'Dashboard';
+            
+            // Re-render target screens
+            if(pageId === 'dashboard') renderDashboard();
+            if(pageId === 'vehicles') renderVehicles();
+            if(pageId === 'drivers') renderDrivers();
+            if(pageId === 'assignments') renderAssignments();
+            if(pageId === 'maintenance') renderMaintenance();
+            if(pageId === 'fuel') renderFuel();
+            if(pageId === 'reports') updateReportCharts();
+
+            // Mobile menu close on click
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = 'fa-solid fa-moon';
+            } else {
+                html.classList.add('dark');
+                icon.className = 'fa-solid fa-sun text-amber-400';
+            }
+        }
+
+        function toggleNotifications() {
+            document.getElementById('notifMenu').classList.toggle('hidden');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // --- DASHBOARD FUNCTIONS ---
+        function renderDashboard() {
+            // Calculate Fleet Metrics
+            const active = appState.vehicles.filter(v => v.status === 'Active').length;
+            const maint = appState.vehicles.filter(v => v.status === 'Maintenance').length;
+            const oos = appState.vehicles.filter(v => v.status === 'Out of Service').length;
+            const reserved = appState.vehicles.filter(v => v.status === 'Reserved').length;
+
+            document.getElementById('stat-active').innerText = active;
+            document.getElementById('stat-maintenance').innerText = maint;
+            document.getElementById('stat-outofservice').innerText = oos;
+            document.getElementById('stat-reserved').innerText = reserved;
+            document.getElementById('activeCountPill').innerText = `${active} Active Fleet`;
+
+            // Dashboard Driver Summary Table
+            const tbody = document.getElementById('dashDriverTable');
+            tbody.innerHTML = appState.drivers.map(d => {
+                const assignedV = appState.vehicles.find(v => v.id === d.assignedVehicleId);
+                const vehicleText = assignedV ? `${assignedV.make} ${assignedV.model} (${assignedV.plate})` : '<span class="text-slate-400 font-normal">Unassigned</span>';
+                return `
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition">
+                        <td class="py-3 px-6 font-semibold text-slate-800 dark:text-slate-200">${d.name}</td>
+                        <td class="py-3 px-6 text-slate-600 dark:text-slate-300">${vehicleText}</td>
+                        <td class="py-3 px-6 text-slate-500 font-mono text-xs">${d.license}</td>
+                        <td class="py-3 px-6">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold ${d.score >= 90 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-amber-100 text-amber-700'}">${d.score}%</span>
+                        </td>
+                        <td class="py-3 px-6">
+                            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> On Duty
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // --- VEHICLE MANAGEMENT CRUD ---
+        function renderVehicles() {
+            const search = document.getElementById('vehicleSearch')?.value.toLowerCase() || '';
+            const statusFilter = document.getElementById('vehicleStatusFilter')?.value || 'ALL';
+
+            const filtered = appState.vehicles.filter(v => {
+                const matchQuery = `${v.make} ${v.model} ${v.plate} ${v.vin}`.toLowerCase().includes(search);
+                const matchStatus = (statusFilter === 'ALL') || (v.status === statusFilter);
+                return matchQuery && matchStatus;
+            });
+
+            const tbody = document.getElementById('vehicleTableBody');
+            tbody.innerHTML = filtered.map(v => {
+                let badgeClass = '';
+                if (v.status === 'Active') badgeClass = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300';
+                else if (v.status === 'Maintenance') badgeClass = 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300';
+                else if (v.status === 'Out of Service') badgeClass = 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300';
+                else badgeClass = 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300';
+
+                return `
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition">
+                        <td class="py-3.5 px-6 font-semibold text-slate-800 dark:text-slate-200">
+                            <i class="fa-solid fa-truck text-[#2563EB] mr-2"></i> ${v.make}
+                        </td>
+                        <td class="py-3.5 px-6 text-slate-600 dark:text-slate-300">${v.year} ${v.model}</td>
+                        <td class="py-3.5 px-6">
+                            <div class="font-bold text-slate-800 dark:text-slate-200">${v.plate}</div>
+                            <div class="text-[11px] font-mono text-slate-400">${v.vin}</div>
+                        </td>
+                        <td class="py-3.5 px-6">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${badgeClass}">${v.status}</span>
+                        </td>
+                        <td class="py-3.5 px-6 text-right space-x-2">
+                            <button onclick="editVehicle('${v.id}')" class="p-1.5 text-slate-500 hover:text-[#2563EB] transition"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteVehicle('${v.id}')" class="p-1.5 text-slate-500 hover:text-rose-600 transition"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openVehicleModal(vId = null) {
+            document.getElementById('vehicleModal').classList.remove('hidden');
+            if (vId) {
+                const v = appState.vehicles.find(item => item.id === vId);
+                document.getElementById('vehicleModalTitle').innerText = 'Edit Vehicle Details';
+                document.getElementById('vId').value = v.id;
+                document.getElementById('vMake').value = v.make;
+                document.getElementById('vModel').value = v.model;
+                document.getElementById('vYear').value = v.year;
+                document.getElementById('vPlate').value = v.plate;
+                document.getElementById('vVin').value = v.vin;
+                document.getElementById('vStatus').value = v.status;
+            } else {
+                document.getElementById('vehicleModalTitle').innerText = 'Add New Vehicle';
+                document.getElementById('vId').value = '';
+                document.getElementById('vMake').value = '';
+                document.getElementById('vModel').value = '';
+                document.getElementById('vYear').value = '';
+                document.getElementById('vPlate').value = '';
+                document.getElementById('vVin').value = '';
+                document.getElementById('vStatus').value = 'Active';
+            }
+        }
+
+        function closeVehicleModal() {
+            document.getElementById('vehicleModal').classList.add('hidden');
+        }
+
+        function saveVehicle(e) {
+            e.preventDefault();
+            const id = document.getElementById('vId').value;
+            const vehicleData = {
+                id: id || 'v' + Date.now(),
+                make: document.getElementById('vMake').value,
+                model: document.getElementById('vModel').value,
+                year: parseInt(document.getElementById('vYear').value),
+                plate: document.getElementById('vPlate').value,
+                vin: document.getElementById('vVin').value,
+                status: document.getElementById('vStatus').value
+            };
+
+            if (id) {
+                const idx = appState.vehicles.findIndex(v => v.id === id);
+                appState.vehicles[idx] = vehicleData;
+                showToast("Vehicle updated successfully");
+            } else {
+                appState.vehicles.push(vehicleData);
+                showToast("New vehicle added to fleet");
+            }
+
+            closeVehicleModal();
+            renderVehicles();
+            renderDashboard();
+        }
+
+        function editVehicle(id) {
+            openVehicleModal(id);
+        }
+
+        function deleteVehicle(id) {
+            appState.vehicles = appState.vehicles.filter(v => v.id !== id);
+            showToast("Vehicle removed from system");
+            renderVehicles();
+            renderDashboard();
+        }
+
+        // --- DRIVER MANAGEMENT CRUD ---
+        function renderDrivers() {
+            const search = document.getElementById('driverSearch')?.value.toLowerCase() || '';
+            const filtered = appState.drivers.filter(d => 
+                `${d.name} ${d.license} ${d.phone}`.toLowerCase().includes(search)
+            );
+
+            const grid = document.getElementById('driverCardsGrid');
+            grid.innerHTML = filtered.map(d => {
+                const assignedV = appState.vehicles.find(v => v.id === d.assignedVehicleId);
+                const vehicleLabel = assignedV ? `${assignedV.make} ${assignedV.model}` : 'Unassigned';
+
+                return `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-[#2563EB] font-bold flex items-center justify-center text-lg">
+                                        ${d.name.split(' ').map(n=>n[0]).join('')}
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 dark:text-white text-base">${d.name}</h4>
+                                        <p class="text-xs text-slate-400 font-mono">${d.license}</p>
+                                    </div>
+                                </div>
+                                <span class="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs rounded-lg">${d.score}% Score</span>
+                            </div>
+                            <div class="space-y-2 text-xs text-slate-600 dark:text-slate-300 my-4">
+                                <p class="flex items-center gap-2"><i class="fa-solid fa-phone text-slate-400 w-4"></i> ${d.phone}</p>
+                                <p class="flex items-center gap-2"><i class="fa-solid fa-truck text-slate-400 w-4"></i> <strong>Assigned:</strong> ${vehicleLabel}</p>
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
+                            <button onclick="editDriver('${d.id}')" class="px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50">Edit Profile</button>
+                            <button onclick="deleteDriver('${d.id}')" class="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 rounded-lg text-xs font-semibold hover:bg-rose-100">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openDriverModal(dId = null) {
+            document.getElementById('driverModal').classList.remove('hidden');
+            if (dId) {
+                const d = appState.drivers.find(item => item.id === dId);
+                document.getElementById('driverModalTitle').innerText = 'Edit Driver Profile';
+                document.getElementById('dId').value = d.id;
+                document.getElementById('dName').value = d.name;
+                document.getElementById('dLicense').value = d.license;
+                document.getElementById('dPhone').value = d.phone;
+                document.getElementById('dScore').value = d.score;
+            } else {
+                document.getElementById('driverModalTitle').innerText = 'Add New Driver';
+                document.getElementById('dId').value = '';
+                document.getElementById('dName').value = '';
+                document.getElementById('dLicense').value = '';
+                document.getElementById('dPhone').value = '';
+                document.getElementById('dScore').value = 95;
+            }
+        }
+
+        function closeDriverModal() {
+            document.getElementById('driverModal').classList.add('hidden');
+        }
+
+        function saveDriver(e) {
+            e.preventDefault();
+            const id = document.getElementById('dId').value;
+            const driverData = {
+                id: id || 'd' + Date.now(),
+                name: document.getElementById('dName').value,
+                license: document.getElementById('dLicense').value,
+                phone: document.getElementById('dPhone').value,
+                score: parseInt(document.getElementById('dScore').value),
+                assignedVehicleId: id ? (appState.drivers.find(d => d.id === id)?.assignedVehicleId || null) : null
+            };
+
+            if (id) {
+                const idx = appState.drivers.findIndex(d => d.id === id);
+                appState.drivers[idx] = driverData;
+                showToast("Driver profile updated");
+            } else {
+                appState.drivers.push(driverData);
+                showToast("Driver profile created");
+            }
+
+            closeDriverModal();
+            renderDrivers();
+            renderDashboard();
+        }
+
+        function editDriver(id) {
+            openDriverModal(id);
+        }
+
+        function deleteDriver(id) {
+            appState.drivers = appState.drivers.filter(d => d.id !== id);
+            showToast("Driver removed from system");
+            renderDrivers();
+            renderDashboard();
+        }
+
+        // --- VEHICLE ASSIGNMENTS ---
+        function renderAssignments() {
+            // Populate select dropdowns
+            const driverSelect = document.getElementById('assignDriverSelect');
+            driverSelect.innerHTML = appState.drivers.map(d => `<option value="${d.id}">${d.name} (${d.license})</option>`).join('');
+
+            const vehicleSelect = document.getElementById('assignVehicleSelect');
+            vehicleSelect.innerHTML = appState.vehicles.map(v => `<option value="${v.id}">${v.make} ${v.model} - ${v.plate}</option>`).join('');
+
+            // Render active assignment table
+            const tbody = document.getElementById('assignmentTableBody');
+            tbody.innerHTML = appState.drivers.map(d => {
+                const v = appState.vehicles.find(item => item.id === d.assignedVehicleId);
+                return `
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition">
+                        <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">${d.name}</td>
+                        <td class="py-3 px-4 text-slate-600 dark:text-slate-300">
+                            ${v ? `<strong>${v.make} ${v.model}</strong> (${v.plate})` : '<span class="text-slate-400">None</span>'}
+                        </td>
+                        <td class="py-3 px-4 text-xs text-slate-500">Active Current</td>
+                        <td class="py-3 px-4 text-right">
+                            ${v ? `<button onclick="unassignVehicle('${d.id}')" class="text-xs text-rose-600 hover:underline font-semibold">Unassign</button>` : '<span class="text-xs text-slate-400">Ready</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function handleAssignmentSubmit(e) {
+            e.preventDefault();
+            const driverId = document.getElementById('assignDriverSelect').value;
+            const vehicleId = document.getElementById('assignVehicleSelect').value;
+
+            const driver = appState.drivers.find(d => d.id === driverId);
+            if (driver) {
+                driver.assignedVehicleId = vehicleId;
+                showToast(`Assigned vehicle to ${driver.name}`);
+                renderAssignments();
+                renderDashboard();
+            }
+        }
+
+        function unassignVehicle(driverId) {
+            const driver = appState.drivers.find(d => d.id === driverId);
+            if (driver) {
+                driver.assignedVehicleId = null;
+                showToast(`Unassigned vehicle from ${driver.name}`);
+                renderAssignments();
+                renderDashboard();
+            }
+        }
+
+        // --- MAINTENANCE SCHEDULE ---
+        function renderMaintenance() {
+            const tbody = document.getElementById('maintenanceTableBody');
+            tbody.innerHTML = appState.maintenance.map(m => {
+                const v = appState.vehicles.find(item => item.id === m.vehicleId);
+                const vehicleName = v ? `${v.make} ${v.model} (${v.plate})` : 'Unknown Vehicle';
+
+                let statusBadge = 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300';
+                if (m.status === 'In Progress') statusBadge = 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300';
+                if (m.status === 'Completed') statusBadge = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300';
+
+                return `
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition">
+                        <td class="py-3.5 px-6 font-semibold text-slate-800 dark:text-slate-200">${vehicleName}</td>
+                        <td class="py-3.5 px-6 text-slate-600 dark:text-slate-300">${m.type}</td>
+                        <td class="py-3.5 px-6 text-xs text-slate-500">${m.date}</td>
+                        <td class="py-3.5 px-6 font-bold text-slate-800 dark:text-slate-200">$${m.cost}</td>
+                        <td class="py-3.5 px-6"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${statusBadge}">${m.status}</span></td>
+                        <td class="py-3.5 px-6 text-right">
+                            <button onclick="deleteMaintenance('${m.id}')" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Fill vehicle dropdown in modal
+            const select = document.getElementById('mVehicleSelect');
+            if (select) {
+                select.innerHTML = appState.vehicles.map(v => `<option value="${v.id}">${v.make} ${v.model} (${v.plate})</option>`).join('');
+            }
+        }
+
+        function openMaintenanceModal() {
+            document.getElementById('maintenanceModal').classList.remove('hidden');
+        }
+
+        function closeMaintenanceModal() {
+            document.getElementById('maintenanceModal').classList.add('hidden');
+        }
+
+        function saveMaintenance(e) {
+            e.preventDefault();
+            const record = {
+                id: 'm' + Date.now(),
+                vehicleId: document.getElementById('mVehicleSelect').value,
+                type: document.getElementById('mType').value,
+                cost: parseFloat(document.getElementById('mCost').value),
+                date: document.getElementById('mDate').value,
+                status: document.getElementById('mStatus').value
+            };
+
+            appState.maintenance.push(record);
+            showToast("Maintenance schedule logged");
+            closeMaintenanceModal();
+            renderMaintenance();
+            updateReportCharts();
+        }
+
+        function deleteMaintenance(id) {
+            appState.maintenance = appState.maintenance.filter(m => m.id !== id);
+            showToast("Maintenance log deleted");
+            renderMaintenance();
+        }
+
+        // --- FUEL & MILEAGE LOG ---
+        function renderFuel() {
+            // Fill vehicle selector
+            const select = document.getElementById('fuelVehicleSelect');
+            if (select) {
+                select.innerHTML = appState.vehicles.map(v => `<option value="${v.id}">${v.make} ${v.model} (${v.plate})</option>`).join('');
+            }
+
+            const tbody = document.getElementById('fuelTableBody');
+            tbody.innerHTML = appState.fuelLogs.map(f => {
+                const v = appState.vehicles.find(item => item.id === f.vehicleId);
+                const vName = v ? `${v.make} ${v.model}` : 'Vehicle';
+                return `
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition">
+                        <td class="py-3 px-4 text-xs text-slate-500">${f.date}</td>
+                        <td class="py-3 px-4 font-semibold text-slate-800 dark:text-slate-200">${vName}</td>
+                        <td class="py-3 px-4 text-slate-600 dark:text-slate-300">${f.gallons} gal</td>
+                        <td class="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">$${f.cost.toFixed(2)}</td>
+                        <td class="py-3 px-4 text-xs font-mono text-slate-500">${f.odometer.toLocaleString()} mi</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function handleFuelSubmit(e) {
+            e.preventDefault();
+            const entry = {
+                id: 'f' + Date.now(),
+                vehicleId: document.getElementById('fuelVehicleSelect').value,
+                gallons: parseFloat(document.getElementById('fuelGallons').value),
+                cost: parseFloat(document.getElementById('fuelCost').value),
+                odometer: parseInt(document.getElementById('fuelOdometer').value),
+                date: document.getElementById('fuelDate').value
+            };
+
+            appState.fuelLogs.unshift(entry);
+            showToast("Fuel & Mileage record added");
+            renderFuel();
+            updateReportCharts();
+        }
+
+        // --- CHARTS & ANALYTICS ---
+        let fuelChartInstance, costChartInstance, distChartInstance;
+
+        function initCharts() {
+            // Main Fuel Dashboard Chart
+            const ctxFuel = document.getElementById('dashboardFuelChart').getContext('2d');
+            fuelChartInstance = new Chart(ctxFuel, {
+                type: 'line',
+                data: {
+                    labels: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                    datasets: [
+                        {
+                            label: 'Fuel Expense ($)',
+                            data: [1200, 1450, 1100, 1600, 1350, 1890],
+                            borderColor: '#2563EB',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Gallons Consumed',
+                            data: [350, 410, 320, 460, 390, 510],
+                            borderColor: '#10B981',
+                            borderDash: [5, 5],
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Reports Cost Chart
+            const ctxCost = document.getElementById('costBreakdownChart').getContext('2d');
+            costChartInstance = new Chart(ctxCost, {
+                type: 'bar',
+                data: {
+                    labels: ['Fuel Expenses', 'Maintenance Costs'],
+                    datasets: [{
+                        label: 'Total Cost ($)',
+                        data: [1890, 1250],
+                        backgroundColor: ['#2563EB', '#F59E0B']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Reports Status Chart
+            const ctxDist = document.getElementById('statusDistChart').getContext('2d');
+            distChartInstance = new Chart(ctxDist, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Active', 'Maintenance', 'Out of Service', 'Reserved'],
+                    datasets: [{
+                        data: [12, 3, 1, 2],
+                        backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#A855F7']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function updateReportCharts() {
+            if (!costChartInstance || !distChartInstance) return;
+
+            // Recalculate fuel total
+            const totalFuelCost = appState.fuelLogs.reduce((sum, f) => sum + f.cost, 0) + 1890;
+            const totalMaintCost = appState.maintenance.reduce((sum, m) => sum + m.cost, 0);
+
+            costChartInstance.data.datasets[0].data = [totalFuelCost, totalMaintCost];
+            costChartInstance.update();
+
+            const active = appState.vehicles.filter(v => v.status === 'Active').length;
+            const maint = appState.vehicles.filter(v => v.status === 'Maintenance').length;
+            const oos = appState.vehicles.filter(v => v.status === 'Out of Service').length;
+            const reserved = appState.vehicles.filter(v => v.status === 'Reserved').length;
+
+            distChartInstance.data.datasets[0].data = [active, maint, oos, reserved];
+            distChartInstance.update();
+        }
+
+        // --- EXPORT FUNCTIONALITY ---
+        function exportReport(type) {
+            showToast(`Generating & Downloading ${type} Fleet Report...`);
+            setTimeout(() => {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `Fleet_Report_${new Date().toISOString().split('T')[0]}.${type.toLowerCase()}`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+            }, 800);
+        }
+    </script>
+</body>
+</html>
